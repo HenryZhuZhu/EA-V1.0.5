@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>产品分析 · 问题解决效率原型</title>
+  <style>
+    :root { --blue:#0052d9; --blue-hover:#003fa8; --blue-soft:#eef5ff; --ink:#172033; --text:#475569; --muted:#8491a5; --line:#dfe5ee; --line-soft:#edf1f6; --panel:#fff; --canvas:#f4f7fb; --red:#d9363e; --amber:#c87500; --green:#07865c; --cyan:#0086a8; --radius:8px; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; min-width:1180px; min-height:100%; }
+    body { color:var(--ink); background:#f8fafc; font-family:Aptos,"PingFang SC","Microsoft YaHei",sans-serif; letter-spacing:0; }
+    button,input { font:inherit; letter-spacing:0; }
+    button { cursor:pointer; }
+    .app-shell { display:flex; height:100vh; overflow:hidden; }
+    .app-sidebar { width:236px; flex:0 0 236px; display:flex; flex-direction:column; border-right:1px solid #e2e8f0; background:white; transition:width .2s ease,flex-basis .2s ease; }
+    .app-sidebar.collapsed { width:64px; flex-basis:64px; }
+    .app-brand { height:56px; display:flex; align-items:center; gap:9px; padding:0 15px; border-bottom:1px solid #f1f5f9; }
+    .app-logo { width:29px; height:29px; flex:0 0 29px; display:grid; place-items:center; border-radius:7px; color:white; background:linear-gradient(135deg,#00A4FF,#0052D9); font-size:14px; font-weight:700; }
+    .app-sidebar.collapsed .app-logo { cursor:pointer; }
+    .app-brand-copy { min-width:0; }
+    .app-brand-copy strong { display:block; white-space:nowrap; font-size:14px; font-weight:650; }
+    .app-brand-copy span { display:block; margin-top:2px; white-space:nowrap; color:#94a3b8; font-size:9.5px; }
+    .sidebar-collapse { margin-left:auto; width:27px; height:27px; display:grid; place-items:center; border:0; border-radius:5px; background:transparent; color:#94a3b8; font-size:15px; }
+    .sidebar-collapse:hover { background:#f1f5f9; }
+    .app-sidebar.collapsed .app-brand { justify-content:center; padding:0; }
+    .app-sidebar.collapsed .app-brand-copy,.app-sidebar.collapsed .sidebar-collapse,.app-sidebar.collapsed .nav-label,.app-sidebar.collapsed .nav-section,.app-sidebar.collapsed .profile-copy { display:none; }
+    .app-nav { flex:1; padding:12px 8px; overflow-y:auto; }
+    .nav-section { padding:7px 11px; color:#94a3b8; font-size:9.5px; text-transform:uppercase; }
+    .nav-item { width:100%; min-height:38px; display:flex; align-items:center; gap:10px; border:0; border-radius:6px; padding:0 11px; background:transparent; color:#64748b; text-align:left; font-size:12px; }
+    .nav-item:hover { color:#334155; background:#f8fafc; }
+    .nav-item.active { color:var(--blue); background:rgba(0,82,217,.07); font-weight:650; }
+    .nav-icon { width:18px; flex:0 0 18px; text-align:center; font-size:14px; }
+    .nav-children { margin:2px 0 5px 18px; padding-left:11px; border-left:1px solid #e2e8f0; }
+    .nav-children .nav-item { min-height:32px; padding-left:8px; font-size:11px; }
+    .app-sidebar.collapsed .nav-item { justify-content:center; padding:0; }
+    .app-sidebar.collapsed .nav-children { display:none; }
+    .profile-box { margin:0 11px 12px; padding:8px; display:flex; align-items:center; gap:8px; border-top:1px solid #f1f5f9; background:#f8fafc; border-radius:6px; }
+    .profile-avatar { width:30px; height:30px; flex:0 0 30px; display:grid; place-items:center; border-radius:50%; color:white; background:linear-gradient(135deg,#00A4FF,#0052D9); font-size:10px; }
+    .profile-copy strong { display:block; font-size:11px; }
+    .profile-copy span { display:block; margin-top:2px; color:#94a3b8; white-space:nowrap; font-size:8.5px; }
+    .app-sidebar.collapsed .profile-box { margin:0 8px 12px; justify-content:center; padding:7px 0; }
+    .app-frame { min-width:0; flex:1; display:flex; flex-direction:column; }
+    /* Ignore accidental fragment; valid CSS resumes below. 
+  <div class="app-shell">
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="app-brand">
+        <div class="app-logo">E</div>
+        <div class="app-brand-copy"><strong>EA Platform</strong><span>Engineering Portal</span></div>
+        <button class="sidebar-collapse" id="sidebarCollapse" title="收起侧栏">◧</button>
+      </div>
+      <nav class="app-nav">
+        <div class="nav-section">工作台</div>
+        <button class="nav-item"><span class="nav-icon">▣</span><span class="nav-label">我的</span></button>
+        <div class="nav-children">
+          <button class="nav-item"><span class="nav-icon">▤</span><span class="nav-label">我的任务</span></button>
+          <button class="nav-item"><span class="nav-icon">▥</span><span class="nav-label">我的 Case</span></button>
+          <button class="nav-item"><span class="nav-icon">◷</span><span class="nav-label">最近浏览</span></button>
+          <button class="nav-item"><span class="nav-icon">▧</span><span class="nav-label">智能汇总</span></button>
+        </div>
+        <button class="nav-item active"><span class="nav-icon">▥</span><span class="nav-label">分析中心</span></button>
+        <button class="nav-item"><span class="nav-icon">⌘</span><span class="nav-label">技能中心</span></button>
+        <button class="nav-item"><span class="nav-icon">♧</span><span class="nav-label">团队看板</span></button>
+      </nav>
+      <div class="profile-box"><div class="profile-avatar">Z</div><div class="profile-copy"><strong>张伟</strong><span>PTE Engineer · PTE</span></div></div>
+    </aside>
+
+    <div class="app-frame">
+      <header class="global-topbar">
+        <div class="breadcrumb"><span>EA 平台</span><span>›</span><b>分析中心</b></div>
+        <div class="global-search">⌕ <span>搜索 Case、任务、用户…</span></div>
+        <button class="top-command primary" data-shell-action="新建 Case">＋ 新建 Case</button>
+        <button class="top-command" data-shell-action="系统建议">？ 系统建议</button>
+        <button class="notification" data-shell-action="通知">♧<b>3</b></button>
+      </header>
+
+      <div class="page-scroll">
+        <div class="page-container">
+          <button class="back-button" data-shell-action="返回分析中心">← 返回</button>
+          <section class="page-heading">
+            <div class="title-block">
+              <h1>产品分析</h1>
+              <p>产品问题解决效率 · 从结案趋势定位部门、成员与任务瓶颈</p>
+              <div class="scope-note">统计口径：按 Case 实际结案时间</div>
+            </div>
+            <div class="time-tools">
+              <div class="time-control">
+                <span class="time-control-label">统计范围</span>
+                <div class="range-tools">
+                  <div class="segmented" id="rangeTabs">
+                    <button data-range="30" title="查看最近 30 天实际结案的 Case">近30天</button>
+                    <button data-range="90" class="active" title="查看最近 90 天实际结案的 Case">近90天</button>
+                    <button data-range="365" title="查看最近 12 个月实际结案的 Case">近12个月</button>
+                  </div>
+                  <button class="custom-button" id="customToggle">自定义</button>
+                </div>
+              </div>
+              <div class="time-control">
+                <span class="time-control-label">汇总粒度</span>
+                <div class="segmented" id="periodTabs">
+                  <button data-period="day" title="图表中每个点代表一天内结案的 Case">按日</button>
+                  <button data-period="week" class="active" title="图表中每个点代表周一至周日结案的 Case">按周</button>
+                  <button data-period="month" title="图表中每个点代表自然月内结案的 Case">按月</button>
+                </div>
+              </div>
+              <div class="custom-popover" id="customPopover">
+                <div class="date-grid">
+                  <label>开始日期<input type="date" id="customStart" /></label>
+                  <label>结束日期<input type="date" id="customEnd" /></label>
+                </div>
+                <div class="popover-actions">
+                  <button class="btn" id="clearCustom">清除</button>
+                  <button class="btn primary" id="applyCustom">应用</button>
+                </div>
+              </div>
+      --red: #d9363e;
+          </section>
+    .sidebar-collapse:hover { background: #f1f5f9; }
+          <main class="workspace">
+            <aside class="sidebar">
+              <div class="sidebar-head">
+                <div class="picker-title">产品选择 <span class="selection-count" id="selectionCount">0 / 3</span></div>
+                <div class="search"><input id="productSearch" placeholder="搜索产品或负责人" /><span>⌕</span></div>
+                <button class="clear-link" id="clearSelection">清除选择</button>
+              </div>
+              <div class="product-list" id="productList"></div>
+            </aside>
+    .nav-children .nav-item { min-height: 32px; padding-left: 8px; font-size: 11px; }
+            <section class="main-panel">
+              <div class="content-head">
+                <div><h2 id="contentTitle">产品效率总览</h2><p id="contentSubtitle">比较产品结案效率，选择产品后查看趋势与瓶颈</p></div>
+                <div class="range-pill" id="rangePill"></div>
+              </div>
+              <div class="content" id="content"></div>
+            </section>
+          </main>
+        </div>
+    .profile-copy strong { display: block; font-size: 11px; }
+    </div>
+  </div>
+    */
+    .global-topbar { height:56px; flex:0 0 56px; display:flex; align-items:center; gap:16px; padding:0 20px; border-bottom:1px solid #e2e8f0; background:white; z-index:50; }
+    .breadcrumb { display: flex; align-items: center; gap: 7px; color: #94a3b8; font-size: 11px; white-space: nowrap; }
+    .breadcrumb b { color: #475569; font-weight: 650; }
+    .global-search { width: min(440px,42vw); height: 36px; margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 8px; color: #94a3b8; background: #f8fafc; font-size: 11px; }
+    .top-command { height: 32px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #dbe3ed; border-radius: 6px; padding: 0 11px; background: white; color: #475569; font-size: 10.5px; }
+    .top-command.primary { color: white; border-color: var(--blue); background: var(--blue); }
+    .notification { position: relative; width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: transparent; color: #64748b; }
+    .notification b { position: absolute; right: 0; top: -2px; min-width: 15px; height: 15px; display: grid; place-items: center; border-radius: 8px; color: white; background: #ef4444; font-size: 8px; }
+    .page-scroll { min-height: 0; flex: 1; overflow-y: auto; background: radial-gradient(ellipse 80% 45% at 0 0,rgba(0,82,217,.045),transparent 60%),#f8fafc; }
+    .page-container { max-width: 1400px; margin: 0 auto; padding: 22px 28px 30px; }
+    .back-button { display: inline-flex; align-items: center; gap: 5px; border: 0; padding: 0; background: transparent; color: #64748b; font-size: 11px; }
+    .back-button:hover { color: var(--blue); }
+    .page-heading {
+      min-height: 86px;
+      padding: 14px 0 0;
+      display: flex;
+      align-items: flex-end;
+      gap: 18px;
+    }
+    .title-block h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+    .title-block p { margin: 6px 0 0; font-size: 12px; color: #64748b; }
+    .scope-note { margin-top: 6px; color: #94a3b8; font-size: 9.5px; }
+    .time-tools { margin-left: auto; display: flex; align-items: flex-end; gap: 12px; position: relative; }
+    .time-control { display: flex; flex-direction: column; gap: 4px; }
+    .time-control-label { color: var(--muted); font-size: 9.5px; line-height: 1; }
+    .range-tools { display: flex; align-items: center; gap: 6px; }
+    .segmented { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: #f7f9fc; }
+    .segmented button { height: 30px; min-width: 48px; border: 0; border-radius: 6px; color: #64748b; background: transparent; font-size: 12px; }
+    .segmented button.active { color: var(--blue); background: white; box-shadow: 0 1px 4px rgba(15,23,42,.12); font-weight: 650; }
+    .custom-button { height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; background: white; color: var(--text); font-size: 12px; }
+    .custom-button.active { color: var(--blue); border-color: rgba(0,82,217,.35); background: var(--blue-soft); }
+    .custom-popover { display: none; position: absolute; right: 0; top: 50px; width: 350px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: white; box-shadow: 0 18px 45px rgba(15,23,42,.18); }
+    .custom-popover.open { display: block; }
+    .date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .date-grid label { font-size: 11px; color: var(--muted); }
+    .date-grid input { width: 100%; height: 36px; margin-top: 5px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); }
+    .popover-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    .btn { height: 32px; border-radius: 6px; padding: 0 12px; border: 1px solid var(--line); background: white; color: var(--text); font-size: 12px; }
+    .btn:hover { border-color: #b8c4d4; }
+    .btn.primary { border-color: var(--blue); background: var(--blue); color: white; }
+    .btn.primary:hover { background: var(--blue-hover); }
+    .workspace { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; padding: 18px 0 0; }
+    .sidebar, .main-panel { border: 1px solid var(--line); background: var(--panel); border-radius: var(--radius); box-shadow: 0 2px 10px rgba(15,23,42,.045); }
+    .sidebar { overflow: hidden; height: calc(100vh - 212px); min-height: 650px; position: sticky; top: 16px; }
+    .sidebar-head { padding: 14px; border-bottom: 1px solid var(--line-soft); }
+    .picker-title { display: flex; align-items: center; font-size: 13px; font-weight: 650; }
+    .selection-count { margin-left: auto; color: var(--blue); font-size: 11px; }
+    .search { position: relative; margin-top: 10px; }
+    .search input { width: 100%; height: 34px; padding: 0 32px 0 10px; border: 1px solid var(--line); border-radius: 6px; outline: none; color: var(--text); }
+    .search input:focus { border-color: var(--blue); }
+    .search span { position: absolute; right: 10px; top: 8px; color: var(--muted); font-size: 13px; }
+    .clear-link { margin-top: 8px; border: 0; padding: 0; background: transparent; color: var(--blue); font-size: 11px; }
+    .product-list { padding: 8px; max-height: calc(100% - 105px); overflow-y: auto; }
+    .product-row { width: 100%; display: grid; grid-template-columns: 18px minmax(0,1fr) 64px 66px; gap: 8px; align-items: center; padding: 10px; border: 1px solid transparent; border-radius: 7px; background: white; text-align: left; margin-bottom: 3px; }
+    .product-row:hover { background: #f7f9fc; }
+    .product-row.selected { border-color: rgba(0,82,217,.28); background: var(--blue-soft); }
+    .product-row.disabled { opacity: .42; cursor: not-allowed; }
+    .fake-check { width: 16px; height: 16px; border: 1px solid #b8c4d4; border-radius: 4px; display: grid; place-items: center; font-size: 11px; color: transparent; }
+    .selected .fake-check { background: var(--blue); border-color: var(--blue); color: white; }
+    .product-name strong { display: block; font-size: 12.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .product-name small { display: block; margin-top: 3px; font-size: 10px; color: var(--muted); }
+    .mini-spark { width: 64px; height: 24px; overflow: visible; }
+    .product-value { text-align: right; }
+    .product-value strong { display: block; font-size: 12px; color: var(--text); }
+    .product-value small { color: var(--muted); font-size: 9.5px; }
+    .main-panel { min-height: calc(100vh - 212px); overflow: hidden; }
+    .content-head { min-height: 78px; padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--line-soft); }
+    .content-head h2 { margin: 0; font-size: 17px; }
+    .content-head p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .range-pill { margin-left: auto; min-width: 330px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 10px; line-height: 1.55; background: #fafbfd; text-align: left; }
+    .range-pill span { display: block; }
+    .range-pill b { color: var(--text); font-weight: 650; }
+    .content { padding: 18px; }
+    .metric-strip { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 8px; background: white; overflow: hidden; margin-bottom: 16px; }
+    .metric { padding: 12px 14px; border-right: 1px solid var(--line-soft); }
+    .metric:last-child { border-right: 0; }
+    .metric label { display: block; color: var(--muted); font-size: 10.5px; }
+    .metric strong { display: block; margin-top: 4px; font-size: 20px; font-variant-numeric: tabular-nums; }
+    .metric small { display: block; margin-top: 2px; color: var(--muted); font-size: 9.5px; }
+    .up { color: var(--red) !important; }
+    .down { color: var(--green) !important; }
+    .section-title { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+    .section-title h3 { margin: 0; font-size: 14px; }
+    .section-title span { color: var(--muted); font-size: 10.5px; }
+    .overview-table, .compare-table { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .table-row { display: grid; grid-template-columns: 42px minmax(180px,1.4fr) repeat(4, minmax(92px, .7fr)) 28px; gap: 12px; align-items: center; min-height: 58px; padding: 0 14px; border-bottom: 1px solid var(--line-soft); font-size: 11.5px; }
+    .table-row:last-child { border-bottom: 0; }
+    .table-row.header { min-height: 38px; background: #f7f9fc; color: var(--muted); font-size: 10px; font-weight: 650; }
+    .table-row.data { border: 0; border-bottom: 1px solid var(--line-soft); width: 100%; background: white; text-align: left; }
+    .table-row.data:hover { background: #f8fbff; }
+    .rank { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 5px; background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+    .code strong { display: block; font-size: 12.5px; }
+    .code small { display: block; color: var(--muted); margin-top: 3px; }
+    .number { font-variant-numeric: tabular-nums; color: var(--text); }
+    .status { width: max-content; padding: 3px 7px; border-radius: 5px; font-size: 10px; border: 1px solid; }
+    .status.good { color: var(--green); background: #ecf9f4; border-color: #b9ead8; }
+    .status.watch { color: var(--amber); background: #fff7e8; border-color: #f1d69d; }
+    .status.bad { color: var(--red); background: #fff0f0; border-color: #f1c0c3; }
+    .detail-grid { display: grid; grid-template-columns: minmax(0, 1.52fr) minmax(390px, .88fr); gap: 14px; }
+    .trend-panel, .side-detail { border: 1px solid var(--line); border-radius: 8px; background: white; min-width: 0; }
+    .panel-head { height: 52px; padding: 0 14px; display: flex; align-items: center; border-bottom: 1px solid var(--line-soft); }
+    .panel-head h3 { margin: 0; font-size: 13px; }
+    .panel-head span { margin-left: 8px; color: var(--muted); font-size: 10px; }
+    .legend { margin-left: auto; display: flex; gap: 14px; color: var(--muted); font-size: 9.5px; }
+    .legend i { display: inline-block; width: 16px; height: 2px; margin-right: 5px; vertical-align: middle; }
+    .trend-scope { margin-left: auto; display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: #f7f9fc; }
+    .trend-scope button { height: 27px; border: 0; border-radius: 4px; padding: 0 10px; background: transparent; color: var(--muted); font-size: 10px; }
+    .trend-scope button.active { color: var(--blue); background: white; box-shadow: 0 1px 3px rgba(15,23,42,.1); font-weight: 650; }
+    .trend-legend { height: 38px; display: flex; align-items: center; gap: 15px; padding: 0 14px; border-bottom: 1px solid var(--line-soft); color: var(--muted); font-size: 9.5px; }
+    .trend-legend i { display: inline-block; width: 17px; height: 2px; margin-right: 5px; vertical-align: middle; }
+    .trend-legend .outlier-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+    .chart-wrap { height: 335px; padding: 10px 10px 4px; position: relative; }
+    .chart-svg { width: 100%; height: 100%; overflow: visible; }
+    .chart-svg polyline { pointer-events: none; }
+    .chart-grid { stroke: #e9edf3; stroke-width: 1; }
+    .axis-label { fill: #8b98aa; font-size: 10px; }
+    .line-primary { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+    .line-average { fill: none; stroke: #77869a; stroke-width: 1.7; stroke-dasharray: 6 5; stroke-linejoin: round; }
+    .chart-point { stroke: white; stroke-width: 2; cursor: pointer; }
+    .chart-point.selected { stroke: #9ebcf0; stroke-width: 5; }
+    .volume-strip { height: 58px; margin: 0 20px 12px; border-top: 1px solid var(--line-soft); display: flex; align-items: end; gap: 3px; padding-top: 8px; }
+    .volume-label { width: 34px; flex: 0 0 34px; align-self: center; color: var(--muted); font-size: 9px; text-align: center; }
+    .volume-bar { flex: 1; min-width: 2px; background: rgba(0,82,217,.16); border-radius: 2px 2px 0 0; }
+    .partial-period-note { margin: -5px 20px 12px 54px; color: var(--muted); font-size: 9.5px; text-align: right; }
+    .period-detail { border-top: 1px solid var(--line-soft); background: #fbfcfe; }
+    .period-detail-head { min-height: 42px; display: flex; align-items: center; gap: 8px; padding: 8px 14px; }
+    .period-detail-head strong { font-size: 11px; }
+    .period-detail-head span { color: var(--muted); font-size: 9.5px; }
+    .period-detail-head button { margin-left: auto; border: 0; background: transparent; color: var(--blue); font-size: 9.5px; }
+    .period-alert { margin: 0 14px 10px; padding: 8px 10px; border: 1px solid #f0d29a; border-radius: 6px; background: #fff8eb; color: #8a5600; font-size: 9.5px; line-height: 1.5; }
+    .period-list { max-height: 210px; overflow-y: auto; border-top: 1px solid var(--line-soft); }
+    .period-row { min-height: 39px; display: grid; grid-template-columns: 108px minmax(220px,1fr) 100px 70px; gap: 10px; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--line-soft); font-size: 9.5px; }
+    .period-row:last-child { border-bottom: 0; }
+    .period-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+    .period-row .long-value { color: var(--amber); font-weight: 700; }
+    .aging-panel { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: white; }
+    .aging-note { margin-left: auto !important; color: var(--amber) !important; }
+    .aging-kpis { display: grid; grid-template-columns: repeat(4,1fr); border-bottom: 1px solid var(--line-soft); background: #fafbfd; }
+    .aging-kpi { padding: 10px 14px; border-right: 1px solid var(--line-soft); }
+    .aging-kpi:last-child { border-right: 0; }
+    .aging-kpi span { display: block; color: var(--muted); font-size: 9.5px; }
+    .aging-kpi strong { display: block; margin-top: 3px; font-size: 16px; }
+    .aging-body { display: grid; grid-template-columns: minmax(300px,.9fr) minmax(420px,1.1fr); }
+    .aging-bands { padding: 13px 14px; border-right: 1px solid var(--line-soft); }
+    .aging-band { display: grid; grid-template-columns: 72px minmax(100px,1fr) 30px; gap: 8px; align-items: center; margin: 8px 0; color: var(--text); font-size: 9.5px; }
+    .aging-list { padding: 8px 14px; }
+    .aging-list-title { margin-bottom: 5px; color: var(--muted); font-size: 9px; }
+    .aging-row { min-height: 34px; display: grid; grid-template-columns: 105px minmax(170px,1fr) 58px; gap: 8px; align-items: center; border-bottom: 1px solid var(--line-soft); font-size: 9.5px; }
+    .aging-row:last-child { border-bottom: 0; }
+    .aging-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; }
+    .tabs { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--line-soft); overflow-x: auto; }
+    .tabs button { height: 32px; padding: 0 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #64748b; white-space: nowrap; font-size: 10.5px; }
+    .tabs button.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 650; }
+    .tab-content { height: 390px; overflow-y: auto; padding: 10px; }
+    .case-item { border: 1px solid var(--line-soft); border-radius: 7px; margin-bottom: 7px; overflow: hidden; }
+    .case-main { width: 100%; min-height: 62px; display: grid; grid-template-columns: 24px minmax(0,1fr) 74px; gap: 8px; align-items: center; border: 0; background: white; text-align: left; padding: 8px 10px; }
+    .case-main:hover { background: #f8fafc; }
+    .case-main .idx { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 5px; background: var(--blue-soft); color: var(--blue); font-size: 10px; font-weight: 700; }
+    .case-copy strong { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11.5px; }
+    .case-copy small { display: block; margin-top: 4px; color: var(--muted); font-size: 9.5px; }
+    .case-time { text-align: right; }
+    .case-time strong { display: block; font-size: 12px; }
+    .case-time small { color: var(--muted); font-size: 9px; }
+    .case-expand { display: none; padding: 8px 10px 10px 42px; border-top: 1px solid var(--line-soft); background: #fafbfd; }
+    .case-item.expanded .case-expand { display: block; }
+    .stage-row, .bar-row { display: grid; grid-template-columns: 110px minmax(0,1fr) 58px; gap: 8px; align-items: center; margin: 7px 0; font-size: 10px; }
+    .bar-track { height: 7px; border-radius: 4px; background: #edf1f6; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; background: var(--blue); }
+    .bar-fill.amber { background: #e89c2b; }
+    .bar-fill.red { background: #e34d59; }
+    .bar-fill.green { background: #16a678; }
+    .insight { padding: 10px; border: 1px solid var(--line-soft); border-radius: 7px; margin-bottom: 8px; }
+    .insight strong { font-size: 11px; }
+    .insight p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .member-row { display: grid; grid-template-columns: minmax(100px,1fr) 54px 54px 78px; gap: 8px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--line-soft); font-size: 10.5px; }
+    .member-row.header { color: var(--muted); font-size: 9.5px; background: #f8fafc; padding: 0 6px; }
+    .avatar { width: 24px; height: 24px; display: inline-grid; place-items: center; border-radius: 50%; color: white; background: var(--blue); font-size: 9px; margin-right: 6px; }
+    .compare-chart { border: 1px solid var(--line); border-radius: 8px; background: white; margin-bottom: 14px; }
+    .compare-chart .chart-wrap { height: 360px; }
+    .compare-table .table-row { grid-template-columns: minmax(160px,1.4fr) repeat(4, minmax(88px,.8fr)); }
+    .analysis-stack { display: grid; gap: 14px; }
+    .full-trend { border: 1px solid var(--line); border-radius: 8px; background: white; overflow: hidden; }
+    .full-trend .chart-wrap { height: 300px; }
+    .department-panel, .case-explorer { border: 1px solid var(--line); border-radius: 8px; background: white; overflow: hidden; }
+    .department-case-workspace { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: white; }
+    .department-case-workspace .department-panel,
+    .department-case-workspace .case-explorer { border: 0; border-radius: 0; }
+    .department-case-workspace .case-explorer { border-top: 1px solid var(--line); }
+    .department-case-workspace .case-explorer > .panel-head { background: #fbfcfe; }
+    .case-explorer { scroll-margin-top: 92px; }
+    .department-head-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+    .department-head-actions span { color: var(--muted); font-size: 9.5px; }
+    .department-sort { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: #f7f9fc; }
+    .department-sort button { height: 25px; border: 0; border-radius: 4px; padding: 0 8px; background: transparent; color: var(--muted); font-size: 9.5px; }
+    .department-sort button.active { background: white; color: var(--blue); box-shadow: 0 1px 3px rgba(15,23,42,.1); font-weight: 650; }
+    .department-summary-strip { display: grid; grid-template-columns: repeat(4,1fr); border-bottom: 1px solid var(--line-soft); background: #fafbfd; }
+    .department-summary-metric { padding: 10px 14px; border-right: 1px solid var(--line-soft); }
+    .department-summary-metric:last-child { border-right: 0; }
+    .department-summary-metric span { display: block; color: var(--muted); font-size: 9.5px; }
+    .department-summary-metric strong { display: block; margin-top: 3px; color: var(--ink); font-size: 16px; }
+    .department-table-head, .department-row { display: grid; grid-template-columns: 30px 74px minmax(190px,1.3fr) 86px 62px 68px 62px 22px; gap: 10px; align-items: center; padding: 0 13px; }
+    .department-table-head { height: 34px; border-bottom: 1px solid var(--line-soft); background: #f7f9fc; color: var(--muted); font-size: 9px; font-weight: 650; }
+    .department-row { width: 100%; min-height: 50px; border: 0; border-bottom: 1px solid var(--line-soft); background: white; text-align: left; color: var(--text); font-size: 10px; }
+    .department-row:hover { background: #f8fbff; }
+    .department-row.active { background: var(--blue-soft); box-shadow: inset 3px 0 0 var(--blue); }
+    .department-rank { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 5px; background: #eef2f7; color: var(--muted); font-size: 9.5px; font-weight: 700; }
+    .department-row.active .department-rank { background: var(--blue); color: white; }
+    .department-name { font-size: 11.5px; font-weight: 700; color: var(--ink); }
+    .department-cycle { display: grid; grid-template-columns: 62px minmax(80px,1fr); align-items: center; gap: 9px; }
+    .department-cycle strong { font-size: 12px; color: var(--ink); }
+    .department-cycle .bar-track { height: 6px; }
+    .department-subpage { background: white; }
+    .department-subpage-head { min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); background: #fbfcfe; }
+    .department-back { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--muted); font-size: 15px; }
+    .department-back:hover { color: var(--blue); border-color: rgba(0,82,217,.3); }
+    .department-subpage-title strong { display: block; font-size: 13px; }
+    .department-subpage-title span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .department-subpage-result { margin-left: auto; text-align: right; }
+    .department-subpage-result strong { display: block; color: var(--blue); font-size: 11px; }
+    .department-subpage-result button { margin-top: 3px; border: 0; padding: 0; background: transparent; color: var(--blue); font-size: 9px; }
+    .department-subpage-kpis { display: grid; grid-template-columns: repeat(4,1fr); padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+    .department-subpage-kpi { padding: 3px 12px; border-right: 1px solid var(--line-soft); }
+    .department-subpage-kpi:first-child { padding-left: 0; }
+    .department-subpage-kpi:last-child { border-right: 0; }
+    .department-subpage-kpi span { display: block; color: var(--muted); font-size: 8.5px; }
+    .department-subpage-kpi strong { display: block; margin-top: 3px; font-size: 14px; }
+    .member-filter-bar { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line-soft); background:#fbfcfe; }
+    .member-filter-label { color:var(--muted); font-size:9px; }
+    .member-multiselect { position:relative; width:330px; }
+    .member-select-trigger { width:100%; height:34px; display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:6px; padding:0 10px; background:white; color:var(--text); text-align:left; }
+    .member-select-trigger:hover,.member-select-trigger.open { border-color:rgba(0,82,217,.38); }
+    .member-select-title { font-size:10.5px; font-weight:650; }
+    .member-select-summary { margin-left:auto; color:var(--muted); font-size:8.5px; }
+    .member-select-arrow { color:#94a3b8; font-size:10px; transition:transform .16s; }
+    .member-select-trigger.open .member-select-arrow { transform:rotate(180deg); }
+    .member-select-menu { display:none; position:absolute; left:0; right:0; top:40px; z-index:30; overflow:hidden; border:1px solid var(--line); border-radius:7px; background:white; box-shadow:0 14px 30px -12px rgba(15,23,42,.28); }
+    .member-select-menu.open { display:block; }
+    .member-option-row { width:100%; min-height:42px; display:grid; grid-template-columns:18px minmax(90px,1fr) auto; align-items:center; gap:8px; border:0; border-bottom:1px solid var(--line-soft); padding:6px 10px; background:white; color:var(--text); text-align:left; }
+    .member-option-row:last-child { border-bottom:0; }
+    .member-option-row:hover { background:#f8fbff; }
+    .member-option-row.selected { background:var(--blue-soft); }
+    .member-check { width:15px; height:15px; display:grid; place-items:center; border:1px solid #b8c4d4; border-radius:4px; color:transparent; font-size:10px; }
+    .member-option-row.selected .member-check { border-color:var(--blue); background:var(--blue); color:white; }
+    .member-option-name { font-size:10px; font-weight:600; }
+    .member-option-metrics { color:var(--muted); font-size:8.5px; white-space:nowrap; }
+    .member-option-metrics .risk { color:var(--red); }
+    .member-clear-row { color:var(--blue); }
+    .department-task-section { padding: 10px 14px 14px; }
+    .department-task-section-head { display: flex; align-items: center; margin-bottom: 7px; }
+    .department-task-section-head strong { font-size: 10.5px; }
+    .department-task-section-head span { margin-left: 7px; color: var(--muted); font-size: 8.8px; }
+    .department-task-list { max-height: 310px; overflow-y: auto; border: 1px solid var(--line); border-radius: 7px; background: white; }
+    .department-task-head, .department-task-row { display: grid; grid-template-columns: minmax(180px,1.5fr) 92px 96px 96px 70px 58px; gap: 10px; align-items: center; padding: 0 10px; }
+    .department-task-head { position: sticky; top: 0; z-index: 2; height: 31px; color: var(--muted); background: #f7f9fc; font-size: 9px; }
+    .department-task-row { min-height: 43px; border-bottom: 1px solid var(--line-soft); font-size: 9.5px; }
+    .department-task-row:last-child { border-bottom: 0; }
+    .department-task-name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+    .department-task-name small { display: block; margin-top: 2px; color: var(--muted); font-size: 8.3px; }
+    .filter-path { min-height: 42px; display: flex; align-items: center; gap: 7px; padding: 0 13px; border-bottom: 1px solid var(--line-soft); background: #fafbfd; }
+    .filter-path strong { font-size: 11px; }
+    .path-chip { height: 25px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(0,82,217,.22); border-radius: 5px; padding: 0 7px; background: var(--blue-soft); color: var(--blue); font-size: 9.5px; }
+    .path-chip button { border: 0; padding: 0; background: transparent; color: inherit; }
+    .filter-result { margin-left: auto; color: var(--muted); font-size: 10px; }
+    .case-table-head, .unified-case-row { display: grid; grid-template-columns: 30px 118px minmax(210px,1.6fr) 86px 78px 104px 68px 98px 26px; gap: 10px; align-items: center; padding: 0 13px; }
+    .case-table-head { height: 36px; color: var(--muted); background: #f7f9fc; border-bottom: 1px solid var(--line-soft); font-size: 9.5px; font-weight: 650; }
+    .unified-case { border-bottom: 1px solid var(--line-soft); }
+    .unified-case:last-child { border-bottom: 0; }
+    .unified-case-row { width: 100%; min-height: 62px; border: 0; background: white; text-align: left; font-size: 10.5px; }
+    .unified-case-row:hover { background: #f8fbff; }
+    .case-rank { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; background: var(--blue-soft); color: var(--blue); font-size: 10px; font-weight: 700; }
+    .case-title-cell strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; }
+    .case-title-cell small { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; }
+    .dept-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+    .dept-tag { padding: 2px 4px; border-radius: 4px; background: #eef2f7; color: #64748b; font-size: 8.5px; }
+    .delta-fast { color: var(--green); }
+    .delta-slow { color: var(--red); }
+    .task-drill { padding: 10px 13px 13px 53px; border-top: 1px solid var(--line-soft); background: #fafbfd; }
+    .task-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .task-toolbar strong { font-size: 10.5px; }
+    .task-scope { margin-left: auto; display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: white; }
+    .task-scope button { height: 25px; border: 0; border-radius: 4px; padding: 0 8px; background: transparent; color: var(--muted); font-size: 9.5px; }
+    .task-scope button.active { background: var(--blue-soft); color: var(--blue); font-weight: 650; }
+    .task-head, .task-row { display: grid; grid-template-columns: minmax(180px,1.5fr) 62px 72px 96px 96px 64px 58px; gap: 9px; align-items: center; padding: 0 9px; }
+    .task-head { height: 30px; color: var(--muted); background: #f1f4f8; border-radius: 5px 5px 0 0; font-size: 9px; }
+    .task-row { min-height: 42px; border-bottom: 1px solid var(--line-soft); background: white; font-size: 9.5px; }
+    .task-row:last-child { border-bottom: 0; border-radius: 0 0 5px 5px; }
+    .task-name strong { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text); font-size: 10px; }
+    .task-name small { color: var(--muted); font-size: 8.5px; }
+    .overtime { width: max-content; padding: 2px 5px; border-radius: 4px; color: var(--red); background: #fff0f0; border: 1px solid #f1c0c3; font-size: 8.5px; }
+    .ontime { width: max-content; padding: 2px 5px; border-radius: 4px; color: var(--green); background: #ecf9f4; border: 1px solid #b9ead8; font-size: 8.5px; }
+    .empty { height: 480px; display: grid; place-items: center; text-align: center; color: var(--muted); }
+    .empty strong { display: block; color: var(--text); font-size: 14px; margin-bottom: 5px; }
+    .tooltip { position: fixed; display: none; z-index: 90; pointer-events: none; min-width: 170px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.97); box-shadow: 0 10px 28px rgba(15,23,42,.16); font-size: 10px; color: var(--text); }
+    .tooltip strong { display: block; margin-bottom: 4px; }
+    .toast { position: fixed; right: 24px; bottom: 24px; z-index: 100; padding: 10px 14px; border-radius: 7px; background: #172033; color: white; font-size: 11px; opacity: 0; transform: translateY(8px); transition: .2s; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="app-brand"><div class="app-logo">E</div><div class="app-brand-copy"><strong>EA Platform</strong><span>Engineering Portal</span></div><button class="sidebar-collapse" id="sidebarCollapse" title="收起侧栏">◧</button></div>
+      <nav class="app-nav">
+        <div class="nav-section">工作台</div>
+        <button class="nav-item"><span class="nav-icon">▣</span><span class="nav-label">我的</span></button>
+        <div class="nav-children"><button class="nav-item"><span class="nav-icon">▤</span><span class="nav-label">我的任务</span></button><button class="nav-item"><span class="nav-icon">▥</span><span class="nav-label">我的 Case</span></button><button class="nav-item"><span class="nav-icon">◷</span><span class="nav-label">最近浏览</span></button><button class="nav-item"><span class="nav-icon">▧</span><span class="nav-label">智能汇总</span></button></div>
+        <button class="nav-item active"><span class="nav-icon">▥</span><span class="nav-label">分析中心</span></button>
+        <button class="nav-item"><span class="nav-icon">⌘</span><span class="nav-label">技能中心</span></button>
+        <button class="nav-item"><span class="nav-icon">♧</span><span class="nav-label">团队看板</span></button>
+      </nav>
+      <div class="profile-box"><div class="profile-avatar">Z</div><div class="profile-copy"><strong>张伟</strong><span>PTE Engineer · PTE</span></div></div>
+    </aside>
+    <div class="app-frame">
+      <header class="global-topbar"><div class="breadcrumb"><span>EA 平台</span><span>›</span><b>分析中心</b></div><div class="global-search">⌕ <span>搜索 Case、任务、用户…</span></div><button class="top-command primary" data-shell-action="新建 Case">＋ 新建 Case</button><button class="top-command" data-shell-action="系统建议">？ 系统建议</button><button class="notification" data-shell-action="通知">♧<b>3</b></button></header>
+      <div class="page-scroll">
+        <div class="page-container">
+          <button class="back-button" data-shell-action="返回分析中心">← 返回</button>
+          <section class="page-heading">
+            <div class="title-block"><h1>产品分析</h1><p>产品问题解决效率 · 从结案趋势定位部门、成员与任务瓶颈</p><div class="scope-note">统计口径：Case 按实际结案时间；任务按实际完成时间</div></div>
+            <div class="time-tools">
+              <div class="time-control"><span class="time-control-label">统计范围</span><div class="range-tools"><div class="segmented" id="rangeTabs"><button data-range="30" title="查看最近 30 天实际结案的 Case">近30天</button><button data-range="90" class="active" title="查看最近 90 天实际结案的 Case">近90天</button><button data-range="365" title="查看最近 12 个月实际结案的 Case">近12个月</button></div><button class="custom-button" id="customToggle">自定义</button></div></div>
+              <div class="time-control"><span class="time-control-label">汇总粒度</span><div class="segmented" id="periodTabs"><button data-period="day" title="图表中每个点代表一天内结案的 Case">按日</button><button data-period="week" class="active" title="图表中每个点代表周一至周日结案的 Case">按周</button><button data-period="month" title="图表中每个点代表自然月内结案的 Case">按月</button></div></div>
+              <div class="custom-popover" id="customPopover"><div class="date-grid"><label>开始日期<input type="date" id="customStart" /></label><label>结束日期<input type="date" id="customEnd" /></label></div><div class="popover-actions"><button class="btn" id="clearCustom">清除</button><button class="btn primary" id="applyCustom">应用</button></div></div>
+            </div>
+          </section>
+          <main class="workspace">
+            <aside class="sidebar"><div class="sidebar-head"><div class="picker-title">产品选择 <span class="selection-count" id="selectionCount">0 / 3</span></div><div class="search"><input id="productSearch" placeholder="搜索产品或负责人" /><span>⌕</span></div><button class="clear-link" id="clearSelection">清除选择</button></div><div class="product-list" id="productList"></div></aside>
+            <section class="main-panel"><div class="content-head"><div><h2 id="contentTitle">产品效率总览</h2><p id="contentSubtitle">比较产品结案效率，选择产品后查看趋势与瓶颈</p></div><div class="range-pill" id="rangePill"></div></div><div class="content" id="content"></div></section>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DAY = 86400000;
+    const ANCHOR = new Date('2026-08-20T00:00:00');
+    const palette = ['#0052D9', '#00A4FF', '#00B578'];
+    const products = [
+      { code: 'DMJFF', name: 'DMJFF 内存模组', platform: 'G5', family: 'LPDDR5', owner: '顾文博', base: 18.8, targetDays: 20 },
+      { code: 'DMJFE', name: 'DMJFE 高速模组', platform: 'V1', family: 'DDR5', owner: '赵敏', base: 17.3, targetDays: 18 },
+      { code: 'LPDDR4-3733', name: 'LPDDR4 3733', platform: 'G4', family: 'LPDDR4', owner: '王芳', base: 15.9, targetDays: 17 },
+      { code: 'LPDDR5-8533', name: 'LPDDR5 8533', platform: 'V1', family: 'LPDDR5', owner: '刘洋', base: 14.7, targetDays: 16 },
+      { code: 'DDR5-X-7600', name: 'DDR5 X-die 7600', platform: 'G5', family: 'DDR5', owner: '张伟', base: 13.9, targetDays: 15 },
+      { code: 'DDR5-X-8400', name: 'DDR5 X-die 8400', platform: 'V1', family: 'DDR5', owner: '李娜', base: 13.2, targetDays: 15 },
+      { code: 'DDR5-X-6400', name: 'DDR5 X-die 6400', platform: 'G4B', family: 'DDR5', owner: '张伟', base: 11.6, targetDays: 14 },
+      { code: 'Flash-N', name: 'Flash-N NAND', platform: 'G4', family: 'DDR4', owner: '陈磊', base: 9.8, targetDays: 12 }
+    ];
+    const stageDefs = [
+      ['问题确认', 'PTE'], ['ATE 验证', 'CP'], ['物理分析', 'EFA'], ['Coverage 验证', 'DA'], ['方案确认', 'QA']
+    ];
+    const people = {
+      PTE: ['张伟', '刘洋', '周杰'], CP: ['王芳', '林涛'], EFA: ['陈磊', '吴倩'], DA: ['李娜', '孙楠'], QA: ['赵敏', '高晨']
+    };
+    const failModes = ['ICC2 超规格', 'Contact Fail', 'VDDmin 漂移', 'Retention Fail', 'Pattern Margin', 'Leakage'];
+    const levels = ['L1', 'L2', 'L2', 'L3'];
+
+    function addDays(date, days) { return new Date(date.getTime() + days * DAY); }
+    function iso(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function median(values) { if (!values.length) return 0; const sorted = [...values].sort((a,b) => a-b); const middle = Math.floor(sorted.length / 2); return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2; }
+    function average(values) { return values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1); }
+    function fmtDays(value) { return `${value.toFixed(value >= 10 ? 1 : 1)}天`; }
+    function pseudo(seed) { const value = Math.sin(seed * 999.91) * 43758.5453; return value - Math.floor(value); }
+
+    const cases = [];
+    products.forEach((product, productIndex) => {
+      for (let index = 0; index < 64; index += 1) {
+        const offset = (index * 17 + productIndex * 9 + (index % 5) * 3) % 365;
+        const closedAt = index === 0 && productIndex === 0 ? new Date('2026-06-03T00:00:00') : addDays(ANCHOR, -offset);
+        const eraFactor = 1 + ((365 - offset) / 365) * (productIndex < 2 ? .13 : productIndex > 5 ? -.08 : .02);
+        const outlier = index === 0 && productIndex === 0 ? 18 : index === 0 && productIndex === 4 ? 12 : index % 13 === 0 ? 1.85 : index % 9 === 0 ? 1.35 : 1;
+        const durationDays = Math.round(product.base * (.68 + pseudo(index + productIndex * 37) * .68) * eraFactor * outlier * 10) / 10;
+        const createdAt = addDays(closedAt, -Math.ceil(durationDays));
+        const includedStages = stageDefs
+          .map((definition, stageIndex) => ({ definition, stageIndex }))
+          .filter(({ stageIndex }) => stageIndex === 0 || stageIndex === 4 || pseudo(index * 31 + productIndex * 17 + stageIndex * 13) > .34);
+        const weights = includedStages.map(({ stageIndex }) => .12 + pseudo(index * 7 + productIndex * 19 + stageIndex * 23) * .24);
+        const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+        let stageCursor = createdAt.getTime();
+        const stages = includedStages.map(({ definition: [name, department], stageIndex }, includedIndex) => {
+          const hours = durationDays * 24 * weights[includedIndex] / weightTotal;
+          const memberList = people[department];
+          const startedAt = new Date(stageCursor);
+          stageCursor += hours * 3600000;
+          const completedAt = new Date(stageCursor);
+          const targetDays = [2, 3, 4, 3, 2][stageIndex];
+          return { id: `${product.code}-${index + 1}-T${stageIndex + 1}`, name, department, owner: memberList[(index + stageIndex + productIndex) % memberList.length], hours: Math.round(hours * 10) / 10, startedAt: iso(startedAt), completedAt: iso(completedAt), targetDays, overdue: hours / 24 > targetDays };
+        });
+        cases.push({
+          id: `${product.code}-${String(index + 1).padStart(3, '0')}`,
+          product: product.code,
+          code: `EA-${String(260000000000 + productIndex * 1000 + index + 1)}`,
+          name: `${product.family} ${failModes[(index + productIndex) % failModes.length]} · ${index % 3 === 0 ? '客户平台复现' : index % 3 === 1 ? '量产批次定位' : '可靠性验证'}`,
+          owner: [product.owner, '张伟', '王芳', '李娜'][(index + productIndex) % 4],
+          level: levels[(index + productIndex) % levels.length],
+          failMode: failModes[(index + productIndex) % failModes.length],
+          createdAt: iso(createdAt), closedAt: iso(closedAt), durationDays, stages,
+          onTime: durationDays <= product.targetDays,
+          risk: index % 11 === 0 ? '高风险' : index % 7 === 0 ? '临期' : '正常'
+        });
+      }
+    });
+
+    const openCases = products.flatMap((product, productIndex) => Array.from({ length: 9 }, (_, index) => {
+      const ageDays = 8 + index * 19 + productIndex * 4 + (index === 8 ? 85 : 0);
+      return {
+        id: `${product.code}-OPEN-${index + 1}`,
+        product: product.code,
+        code: `EA-O-${String(260000000000 + productIndex * 100 + index + 1)}`,
+        name: `${product.family} ${failModes[(index + productIndex) % failModes.length]} · 待结案分析`,
+        owner: [product.owner, '张伟', '王芳', '李娜'][(index + productIndex) % 4],
+        createdAt: iso(addDays(ANCHOR, -ageDays)),
+        ageDays
+      };
+    }));
+
+    let state = { rangePreset: '90', period: 'week', selected: [], search: '', custom: null, expandedCase: '', department: '', members: [], memberOpen: false, departmentSort: 'duration', taskScope: 'filtered', trendScope: 'case', bucket: '' };
+    Object.defineProperty(state,'member',{get(){return state.members.join('、');},set(value){state.members=value?[value]:[];}});
+
+    function defaultRange(rangePreset) {
+      if (rangePreset === '365') { const start = new Date(ANCHOR); start.setMonth(start.getMonth() - 11, 1); return { start: iso(start), end: iso(ANCHOR), label: '近 12 个月' }; }
+      if (rangePreset === '30') return { start: iso(addDays(ANCHOR, -29)), end: iso(ANCHOR), label: '近 30 天' };
+      return { start: iso(addDays(ANCHOR, -89)), end: iso(ANCHOR), label: '近 90 天' };
+    }
+    function recommendedPeriod(rangePreset) { return rangePreset === '30' ? 'day' : rangePreset === '365' ? 'month' : 'week'; }
+    function recommendedCustomPeriod(start, end) {
+      const days = Math.round((new Date(`${end}T00:00:00`) - new Date(`${start}T00:00:00`)) / DAY) + 1;
+      return days <= 45 ? 'day' : days <= 180 ? 'week' : 'month';
+    }
+    function activeRange() { return state.custom ? { ...state.custom, label: `${state.custom.start} 至 ${state.custom.end}` } : defaultRange(state.rangePreset); }
+    function rangeCases(productCode, range = activeRange()) { return cases.filter(item => (!productCode || item.product === productCode) && item.closedAt >= range.start && item.closedAt <= range.end); }
+    function productStats(product, range = activeRange()) {
+      const rows = rangeCases(product.code, range);
+      const durations = rows.map(item => item.durationDays);
+      const currentMedian = median(durations);
+      return {
+        product, rows, count: rows.length, median: currentMedian, avg: average(durations),
+        onTimeRate: rows.filter(item => item.onTime).length / Math.max(rows.length, 1) * 100
+      };
+    }
+    function bucketStart(date, period) {
+      const copy = new Date(date);
+      if (period === 'week') { const day = copy.getDay(); copy.setDate(copy.getDate() - (day === 0 ? 6 : day - 1)); }
+      if (period === 'month') copy.setDate(1);
+      return copy;
+    }
+    function nextBucket(date, period) { const copy = new Date(date); if (period === 'month') copy.setMonth(copy.getMonth() + 1); else copy.setDate(copy.getDate() + (period === 'week' ? 7 : 1)); return copy; }
+    function bucketKey(date, period) { const start = bucketStart(date, period); return period === 'month' ? iso(start).slice(0,7) : iso(start); }
+    function bucketLabel(key, period) { if (period === 'month') { const [y,m] = key.split('-'); return `${y.slice(2)}/${Number(m)}`; } const [,m,d] = key.split('-'); return `${Number(m)}/${Number(d)}`; }
+    function bucketsFor(productCode) {
+      const range = activeRange();
+      const map = new Map();
+      rangeCases(productCode, range).forEach(item => { const key = bucketKey(new Date(`${item.closedAt}T00:00:00`), state.period); const list = map.get(key) || []; list.push(item); map.set(key, list); });
+      const result = []; let cursor = bucketStart(new Date(`${range.start}T00:00:00`), state.period); const end = new Date(`${range.end}T00:00:00`);
+      while (cursor <= end && result.length < 400) { const key = bucketKey(cursor, state.period); const rows = map.get(key) || []; const bucketEnd = addDays(nextBucket(cursor, state.period), -1); const partial = range.start > iso(cursor) || range.end < iso(bucketEnd); result.push({ key, label: `${bucketLabel(key, state.period)}${partial?'*':''}`, partial, rows, median: rows.length ? median(rows.map(item => item.durationDays)) : null, avg: rows.length ? average(rows.map(item => item.durationDays)) : null, count: rows.length }); cursor = nextBucket(cursor, state.period); }
+      return result;
+    }
+
+    function rangeTasks(productCode, range = activeRange()) {
+      return cases
+        .filter(item => !productCode || item.product === productCode)
+        .flatMap(item => item.stages.map(task => ({ ...task, caseId: item.id, caseCode: item.code, caseName: item.name, product: item.product, durationDays: task.hours / 24 })))
+        .filter(task => task.completedAt >= range.start && task.completedAt <= range.end);
+    }
+
+    function taskBucketsFor(productCode) {
+      const range = activeRange();
+      const map = new Map();
+      rangeTasks(productCode, range).forEach(task => { const key = bucketKey(new Date(`${task.completedAt}T00:00:00`), state.period); const list = map.get(key) || []; list.push(task); map.set(key, list); });
+      const result = []; let cursor = bucketStart(new Date(`${range.start}T00:00:00`), state.period); const end = new Date(`${range.end}T00:00:00`);
+      while (cursor <= end && result.length < 400) {
+        const key = bucketKey(cursor, state.period); const rows = map.get(key) || []; const bucketEnd = addDays(nextBucket(cursor, state.period), -1); const partial = range.start > iso(cursor) || range.end < iso(bucketEnd);
+        result.push({ key, label: `${bucketLabel(key, state.period)}${partial ? '*' : ''}`, partial, rows, median: rows.length ? median(rows.map(item => item.durationDays)) : null, avg: rows.length ? average(rows.map(item => item.durationDays)) : null, count: rows.length });
+        cursor = nextBucket(cursor, state.period);
+      }
+      return result;
+    }
+
+    function rollingAverage(buckets) {
+      const windowSize = state.period === 'month' ? 3 : state.period === 'week' ? 4 : 7;
+      return buckets.map((_, index) => {
+        const values = buckets.slice(Math.max(0, index - windowSize + 1), index + 1).map(item => item.avg).filter(value => value != null);
+        return values.length ? average(values) : null;
+      });
+    }
+
+    function bucketOutlier(bucket) {
+      if (!bucket.rows.length) return null;
+      const longest = [...bucket.rows].sort((left, right) => right.durationDays - left.durationDays)[0];
+      const typical = Math.max(bucket.median || 0, 1);
+      if (longest.durationDays < 45 || longest.durationDays < typical * 2.2) return null;
+      return { item: longest, lift: (bucket.avg || 0) - typical };
+    }
+
+    function health(stats) {
+      if (!stats.count) return { label: '无数据', cls: 'watch' };
+      if (stats.onTimeRate < 70) return { label: '需关注', cls: 'bad' };
+      if (stats.onTimeRate < 85) return { label: '持续观察', cls: 'watch' };
+      return { label: '稳定', cls: 'good' };
+    }
+
+    function miniTrend(productCode, selected) {
+      const values = bucketsFor(productCode).filter(bucket => bucket.avg != null).slice(-8).map(bucket => bucket.avg);
+      if (!values.length) return '<svg class="mini-spark" viewBox="0 0 64 24" aria-hidden="true"><line x1="2" y1="12" x2="62" y2="12" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="3 3"/></svg>';
+      if (values.length === 1) values.push(values[0]);
+      const min = Math.min(...values), max = Math.max(...values);
+      const points = values.map((value, index) => {
+        const x = 2 + index * 60 / Math.max(values.length - 1, 1);
+        const y = max === min ? 12 : 21 - (value - min) / (max - min) * 18;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+      const color = selected ? '#0052D9' : '#94A3B8';
+      const [lastX, lastY] = points[points.length - 1].split(',');
+      return `<svg class="mini-spark" viewBox="0 0 64 24" role="img" aria-label="最近 ${values.length} 个周期的平均结案周期趋势"><polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${lastX}" cy="${lastY}" r="2.2" fill="${color}"/></svg>`;
+    }
+
+    function renderSidebar() {
+      const list = document.getElementById('productList');
+      const query = state.search.trim().toLowerCase();
+      const atLimit = state.selected.length >= 3;
+      list.innerHTML = products.filter(product => `${product.code} ${product.name} ${product.owner}`.toLowerCase().includes(query)).map(product => {
+        const stats = productStats(product); const selected = state.selected.includes(product.code); const disabled = atLimit && !selected;
+        return `<button class="product-row ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}" data-product="${product.code}" ${disabled ? 'disabled' : ''}>
+          <span class="fake-check">✓</span><span class="product-name"><strong>${product.code}</strong><small>${product.platform} · ${product.family} · ${product.owner}</small></span>${miniTrend(product.code, selected)}
+          <span class="product-value"><strong>${stats.count ? fmtDays(stats.avg) : '—'}</strong><small>范围内平均</small></span>
+        </button>`;
+      }).join('');
+      document.getElementById('selectionCount').textContent = `${state.selected.length} / 3`;
+      list.querySelectorAll('[data-product]').forEach(button => button.addEventListener('click', () => toggleProduct(button.dataset.product)));
+    }
+    function toggleProduct(code) {
+      if (state.selected.includes(code)) state.selected = state.selected.filter(item => item !== code);
+      else if (state.selected.length < 3) state.selected.push(code);
+      else return showToast('最多选择 3 个产品进行对比');
+      state.expandedCase = ''; state.department = ''; state.members = []; state.memberOpen = false; state.bucket = ''; state.taskScope = 'filtered'; render();
+    }
+    function selectSingle(code) { state.selected = [code]; state.expandedCase = ''; state.department = ''; state.members = []; state.memberOpen = false; state.bucket = ''; state.taskScope = 'filtered'; render(); }
+
+    function metricStrip(stats) {
+      return `<div class="metric-strip">
+        <div class="metric"><label>范围内结案 Case</label><strong>${stats.count}</strong><small>按实际结案时间计入</small></div>
+        <div class="metric"><label>平均周期</label><strong>${stats.count ? fmtDays(stats.avg) : '—'}</strong><small>主指标 · 保留长期项影响</small></div>
+        <div class="metric"><label>周期中位数</label><strong>${stats.count ? fmtDays(stats.median) : '—'}</strong><small>稳定参照</small></div>
+        <div class="metric"><label>按期结案率</label><strong>${stats.count ? `${stats.onTimeRate.toFixed(0)}%` : '—'}</strong><small>在产品目标天数内结案</small></div>
+      </div>`;
+    }
+
+    function overview() {
+      const allStats = products.map(product => productStats(product));
+      const allRows = allStats.flatMap(item => item.rows);
+      const summary = { count: allRows.length, median: median(allRows.map(item => item.durationDays)), avg: average(allRows.map(item => item.durationDays)), onTimeRate: allRows.filter(item => item.onTime).length / Math.max(allRows.length, 1) * 100 };
+      const sorted = [...allStats].sort((a,b) => b.avg - a.avg);
+      return `${metricStrip(summary)}<div class="section-title"><h3>产品效率排名</h3><span>点击产品进入趋势与瓶颈分析</span></div>
+        <div class="overview-table"><div class="table-row header"><span>排名</span><span>产品 / 负责人</span><span>范围内结案 Case</span><span>平均周期</span><span>周期中位数</span><span>按期结案率</span><span></span></div>
+        ${sorted.map((stats,index) => { const h = health(stats); return `<button class="table-row data" data-open-product="${stats.product.code}"><span class="rank">${index+1}</span><span class="code"><strong>${stats.product.code}</strong><small>${stats.product.name} · ${stats.product.owner}</small></span><span class="number">${stats.count}</span><span class="number">${stats.count ? fmtDays(stats.avg) : '—'}</span><span class="number">${stats.count ? fmtDays(stats.median) : '—'}</span><span class="number">${stats.count ? `${stats.onTimeRate.toFixed(0)}%` : '—'}</span><span class="status ${h.cls}">${h.label}</span></button>`; }).join('')}</div>`;
+    }
+
+    function lineChart(series, buckets, single = false) {
+      const width = 860, height = 286, left = 50, right = 18, top = 18, bottom = 34;
+      const values = series.flatMap(item => item.values).filter(value => value != null);
+      const maxY = Math.max(10, ...values) * 1.15;
+      const x = index => left + (buckets.length <= 1 ? (width-left-right)/2 : index * (width-left-right)/(buckets.length-1));
+      const y = value => top + (maxY-value) * (height-top-bottom)/maxY;
+      let svg = '';
+      for (let tick=0; tick<=4; tick++) { const value = maxY * (4-tick)/4; const py = top + tick*(height-top-bottom)/4; svg += `<line class="chart-grid" x1="${left}" y1="${py}" x2="${width-right}" y2="${py}"/><text class="axis-label" x="4" y="${py+3}">${value.toFixed(0)}天</text>`; }
+      series.forEach((item, seriesIndex) => {
+        const points = item.values.map((value,index) => value == null ? null : `${x(index)},${y(value)}`).filter(Boolean);
+        if (points.length > 1) svg += `<polyline points="${points.join(' ')}" fill="none" stroke="${item.color}" stroke-width="${item.dashed ? 1.7 : 2.5}" ${item.dashed ? 'stroke-dasharray="6 5"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`;
+        item.values.forEach((value,index) => {
+          if (value == null) return;
+          const bucket = buckets[index]; const outlier = single && item.key === 'avg' ? bucketOutlier(bucket) : null; const clickable = single && item.key === 'avg';
+          const detail = outlier ? `长期项：${outlier.item.caseCode || outlier.item.code} · ${outlier.item.durationDays.toFixed(1)}天` : '';
+          if (outlier) svg += `<circle cx="${x(index)}" cy="${y(value)}" r="8" fill="none" stroke="#C87500" stroke-width="2"/>`;
+          svg += `<circle class="chart-point ${clickable && state.bucket===bucket.key?'selected':''}" cx="${x(index)}" cy="${y(value)}" r="${clickable ? 4 : 2.7}" fill="${item.color}" ${clickable ? `data-bucket="${bucket.key}"` : 'pointer-events="none"'} data-tip="${item.name}|${bucket.label}|${value.toFixed(1)}天|${bucket.count} ${state.trendScope === 'task' && single ? '个完成任务' : '个结案 Case'}|${detail}"/>`;
+        });
+      });
+      const step = Math.max(1, Math.ceil(buckets.length / 8));
+      buckets.forEach((bucket,index) => { if (index % step === 0 || index === buckets.length-1) svg += `<text class="axis-label" text-anchor="middle" x="${x(index)}" y="${height-8}">${bucket.label}</text>`; });
+      const maxCount = Math.max(1, ...buckets.map(item => item.count));
+      const volumeName = state.trendScope === 'task' && single ? '完成任务' : '结案 Case';
+      const bars = buckets.map(bucket => `<span class="volume-bar" title="${bucket.label} · ${bucket.count} 个${volumeName}" style="height:${Math.max(3,bucket.count/maxCount*42)}px"></span>`).join('');
+      const partialNote = buckets.some(bucket=>bucket.partial) ? `<div class="partial-period-note">* 表示统计范围只覆盖该${state.period==='day'?'日':state.period==='week'?'周':'月'}的一部分；请结合下方完成量判断趋势稳定性</div>` : '';
+      return `<div class="chart-wrap"><svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${svg}</svg></div><div class="volume-strip"><span class="volume-label">${state.trendScope === 'task' && single ? '完成量' : '结案量'}</span>${bars}</div>${partialNote}`;
+    }
+
+    function trendStats(product) {
+      const rows = state.trendScope === 'task' ? rangeTasks(product.code) : rangeCases(product.code);
+      const durations = rows.map(item => item.durationDays);
+      const midpoint = median(durations); const threshold = Math.max(state.trendScope === 'task' ? 10 : 45, midpoint * 2.2);
+      return { rows, count: rows.length, avg: average(durations), median: midpoint, longCount: rows.filter(item => item.durationDays >= threshold).length, threshold };
+    }
+
+    function trendMetricStrip(product) {
+      const stats = trendStats(product); const noun = state.trendScope === 'task' ? '完成任务' : '结案 Case';
+      return `<div class="metric-strip">
+        <div class="metric"><label>范围内${noun}</label><strong>${stats.count}</strong><small>按实际${state.trendScope === 'task' ? '完成' : '结案'}日期计入</small></div>
+        <div class="metric"><label>平均周期</label><strong>${stats.count ? fmtDays(stats.avg) : '—'}</strong><small>主指标 · 保留长期项真实影响</small></div>
+        <div class="metric"><label>周期中位数</label><strong>${stats.count ? fmtDays(stats.median) : '—'}</strong><small>典型周期 · 降低极端值干扰</small></div>
+        <div class="metric"><label>长期项</label><strong class="${stats.longCount ? 'up' : ''}">${stats.longCount}</strong><small>周期 ≥ ${stats.threshold.toFixed(0)} 天</small></div>
+      </div>`;
+    }
+
+    function periodDetail(buckets) {
+      if (!state.bucket) return '';
+      const bucket = buckets.find(item => item.key === state.bucket); if (!bucket) return '';
+      const outlier = bucketOutlier(bucket); const taskMode = state.trendScope === 'task';
+      const rows = [...bucket.rows].sort((left, right) => right.durationDays - left.durationDays);
+      return `<div class="period-detail"><div class="period-detail-head"><strong>${bucket.label.replace('*','')} ${taskMode ? '完成任务' : '结案 Case'}明细</strong><span>${bucket.count} 个 · 平均 ${bucket.avg == null ? '—' : fmtDays(bucket.avg)} · 中位数 ${bucket.median == null ? '—' : fmtDays(bucket.median)}</span><button data-clear-trend-bucket>收起</button></div>${outlier ? `<div class="period-alert">本期典型周期为 ${fmtDays(bucket.median)}，但 ${outlier.item.caseCode || outlier.item.code} 的 ${fmtDays(outlier.item.durationDays)} 将平均值抬高约 ${Math.max(0,outlier.lift).toFixed(1)} 天。平均值保留该真实影响，中位数用于观察常规处理效率。</div>` : ''}<div class="period-list">${rows.map(item => `<div class="period-row"><span style="font-family:monospace;color:var(--muted)">${taskMode ? item.id : item.code}</span><strong>${taskMode ? `${item.name} · ${item.caseName}` : item.name}</strong><span>${item.owner}</span><span class="${outlier && item === outlier.item ? 'long-value' : ''}">${fmtDays(item.durationDays)}</span></div>`).join('')}</div></div>`;
+    }
+
+    function openCaseAging(product) {
+      const rows = openCases.filter(item => item.product === product.code).sort((left, right) => right.ageDays - left.ageDays);
+      const bands = [
+        { label: '0–30 天', count: rows.filter(item => item.ageDays <= 30).length, color: '#00B578' },
+        { label: '31–90 天', count: rows.filter(item => item.ageDays > 30 && item.ageDays <= 90).length, color: '#00A4FF' },
+        { label: '91–180 天', count: rows.filter(item => item.ageDays > 90 && item.ageDays <= 180).length, color: '#C87500' },
+        { label: '>180 天', count: rows.filter(item => item.ageDays > 180).length, color: '#D9363E' }
+      ];
+      const maxCount = Math.max(1, ...bands.map(item => item.count));
+      return `<div class="aging-panel"><div class="panel-head"><h3>当前未结案 Case 账龄</h3><span>回答“还有多少长期问题没有解决”</span><span class="aging-note">截至 ${iso(ANCHOR)} · 不受上方结案时间范围影响</span></div><div class="aging-kpis"><div class="aging-kpi"><span>当前未结案</span><strong>${rows.length}</strong></div><div class="aging-kpi"><span>平均账龄</span><strong>${fmtDays(average(rows.map(item => item.ageDays)))}</strong></div><div class="aging-kpi"><span>超过 90 天</span><strong class="${rows.some(item => item.ageDays > 90) ? 'up' : ''}">${rows.filter(item => item.ageDays > 90).length}</strong></div><div class="aging-kpi"><span>最老 Case</span><strong>${fmtDays(rows[0].ageDays)}</strong></div></div><div class="aging-body"><div class="aging-bands">${bands.map(item => `<div class="aging-band"><span>${item.label}</span><span class="bar-track"><span class="bar-fill" style="width:${item.count / maxCount * 100}%;background:${item.color}"></span></span><strong>${item.count}</strong></div>`).join('')}</div><div class="aging-list"><div class="aging-list-title">账龄最长的未结案 Case</div>${rows.slice(0,4).map(item => `<div class="aging-row"><span style="font-family:monospace;color:var(--muted)">${item.code}</span><strong>${item.name}</strong><span class="${item.ageDays > 90 ? 'up' : ''}">${item.ageDays}天</span></div>`).join('')}</div></div></div>`;
+    }
+
+    function renderSingle(product) {
+      const stats = productStats(product); const buckets = state.trendScope === 'task' ? taskBucketsFor(product.code) : bucketsFor(product.code);
+      const series = [
+        { key: 'avg', name: '平均周期', values: buckets.map(item => item.avg), color: '#0052D9' },
+        { key: 'median', name: '周期中位数', values: buckets.map(item => item.median), color: '#77869A', dashed: true },
+        { key: 'rolling', name: state.period === 'month' ? '3 月滚动平均' : state.period === 'week' ? '4 周滚动平均' : '7 日滚动平均', values: rollingAverage(buckets), color: '#07865C', dashed: true }
+      ];
+      return `${trendMetricStrip(product)}<div class="analysis-stack"><div class="full-trend"><div class="panel-head"><h3>${state.trendScope === 'task' ? '任务完成周期趋势' : 'Case 结案周期趋势'}</h3><span>按实际${state.trendScope === 'task' ? '完成' : '结案'}日期归属 · 点击平均周期点查看当期明细</span><div class="trend-scope"><button data-trend-scope="case" class="${state.trendScope === 'case' ? 'active' : ''}">Case 结案</button><button data-trend-scope="task" class="${state.trendScope === 'task' ? 'active' : ''}">任务完成</button></div></div><div class="trend-legend"><span><i style="background:#0052D9"></i>平均周期（主线）</span><span><i style="background:#77869A"></i>中位数</span><span><i style="background:#07865C"></i>${state.period === 'month' ? '3 月' : state.period === 'week' ? '4 周' : '7 日'}滚动平均</span><span><i class="outlier-dot"></i>长期项影响</span><span>下方柱：${state.trendScope === 'task' ? '完成量' : '结案量'}</span></div>${lineChart(series,buckets,true)}${periodDetail(buckets)}</div>${openCaseAging(product)}<div class="department-case-workspace">${departmentSummary(stats)}${caseExplorer(product,stats)}</div></div>`;
+    }
+
+    function departmentMetrics(stats) {
+      const map = new Map();
+      stats.rows.forEach(item => item.stages.forEach(task => {
+        const row = map.get(task.department) || { name: task.department, cases: new Set(), tasks: [], members: new Set(), overdue: 0 };
+        row.cases.add(item.id); row.tasks.push(task); row.members.add(task.owner); if (task.overdue) row.overdue += 1; map.set(task.department,row);
+      }));
+      return [...map.values()].map(row => ({ ...row, medianDays: median(row.tasks.map(task=>task.hours))/24 })).sort((a,b)=>b.medianDays-a.medianDays);
+    }
+    function memberMetrics(stats, department) {
+      const map = new Map();
+      stats.rows.forEach(item => item.stages.filter(task=>task.department===department).forEach(task => {
+        const row = map.get(task.owner) || { name: task.owner, cases: new Set(), tasks: [], overdue: 0 };
+        row.cases.add(item.id); row.tasks.push(task); if(task.overdue) row.overdue += 1; map.set(task.owner,row);
+      }));
+      return [...map.values()].map(row=>({...row,medianDays:median(row.tasks.map(task=>task.hours))/24})).sort((a,b)=>b.medianDays-a.medianDays);
+    }
+    function departmentSummary(stats) {
+      const departments = departmentMetrics(stats).sort((left,right) => {
+        if(state.departmentSort==='overdue') return right.overdue-left.overdue || right.medianDays-left.medianDays;
+        if(state.departmentSort==='tasks') return right.tasks.length-left.tasks.length || right.medianDays-left.medianDays;
+        return right.medianDays-left.medianDays || right.overdue-left.overdue;
+      });
+      const members = state.department ? memberMetrics(stats,state.department) : [];
+      const allMembers = new Set(departments.flatMap(item=>[...item.members]));
+      const totalTasks = departments.reduce((sum,item)=>sum+item.tasks.length,0);
+      const totalOverdue = departments.reduce((sum,item)=>sum+item.overdue,0);
+      const maxMedian = Math.max(1,...departments.map(item=>item.medianDays));
+      if(state.department) {
+        const department = departments.find(item=>item.name===state.department);
+        if(!department) { state.department=''; state.member=''; return departmentSummary(stats); }
+        const selectedMemberMetrics = members.filter(item=>state.members.includes(item.name));
+        const filteredCaseCount = selectedMemberMetrics.length ? new Set(selectedMemberMetrics.flatMap(item=>[...item.cases])).size : department.cases.size;
+        const departmentTasks = stats.rows.flatMap(caseItem => caseItem.stages
+          .filter(task => task.department===department.name && (!state.members.length || state.members.includes(task.owner)))
+          .map(task => ({ ...task, caseItem })))
+          .sort((left,right)=>right.hours-left.hours);
+        return `<div class="department-panel"><div class="department-subpage"><div class="department-subpage-head"><button class="department-back" data-department-back title="返回部门总览">←</button><div class="department-subpage-title"><strong>${department.name} 部门分析</strong><span>成员与任务基于范围内已结案 Case</span></div><div class="department-subpage-result"><strong>${filteredCaseCount} / ${stats.rows.length} Case</strong><button data-scroll-cases>定位 Case 结果 ↓</button></div></div><div class="department-subpage-kpis"><div class="department-subpage-kpi"><span>任务周期中位数</span><strong>${department.medianDays.toFixed(1)}天</strong></div><div class="department-subpage-kpi"><span>参与 Case</span><strong>${department.cases.size}</strong></div><div class="department-subpage-kpi"><span>任务</span><strong>${department.tasks.length}</strong></div><div class="department-subpage-kpi"><span>超时任务</span><strong class="${department.overdue?'up':''}">${department.overdue}</strong></div></div><div class="member-filter-bar"><span class="member-filter-label">成员</span><button class="member-pill ${!state.member?'active':''}" data-member=""><i class="member-pill-avatar">全</i>全部成员 <em>${members.length}人</em></button>${members.map(item=>`<button class="member-pill ${state.member===item.name?'active':''}" data-member="${item.name}"><i class="member-pill-avatar">${item.name.slice(-2)}</i>${item.name}<em>${item.tasks.length}任务 · ${item.medianDays.toFixed(1)}天${item.overdue?` · ${item.overdue}超时`:''}</em></button>`).join('')}</div><div class="department-task-section"><div class="department-task-section-head"><strong>${state.member?`${state.member} 的任务明细`:`${department.name} 全部任务明细`}</strong><span>${departmentTasks.length} 个任务 · 按实际耗时从高到低</span></div><div class="department-task-list"><div class="department-task-head"><span>任务 / 所属 Case</span><span>负责人</span><span>开始</span><span>完成</span><span>实际耗时</span><span>状态</span></div>${departmentTasks.map(({caseItem,...task})=>`<div class="department-task-row"><span class="department-task-name"><strong>${task.name}</strong><small>${caseItem.code} · ${caseItem.name}</small></span><span>${task.owner}</span><span>${task.startedAt}</span><span>${task.completedAt}</span><span>${(task.hours/24).toFixed(1)}天</span><span class="${task.overdue?'overtime':'ontime'}">${task.overdue?'超时':'按期'}</span></div>`).join('')||'<div style="padding:18px;text-align:center;color:var(--muted);font-size:10px">当前成员暂无任务</div>'}</div></div></div></div>`;
+      }
+      const departmentRows = departments.map((item,index)=>`<button class="department-row" data-department="${item.name}"><span class="department-rank">${index+1}</span><span class="department-name">${item.name}</span><span class="department-cycle"><strong>${item.medianDays.toFixed(1)}天</strong><span class="bar-track"><span class="bar-fill ${item.medianDays>maxMedian*.8?'amber':''}" style="width:${item.medianDays/maxMedian*100}%"></span></span></span><span>${item.cases.size} Case</span><span>${item.tasks.length}</span><span class="${item.overdue?'up':''}">${item.overdue}</span><span>${item.members.size} 人</span><span>›</span></button>`).join('');
+      return `<div class="department-panel"><div class="panel-head"><h3>范围内部门参与汇总</h3><span>选择部门进入成员与任务子页面</span><div class="department-head-actions"><span>排序</span><div class="department-sort"><button data-department-sort="duration" class="${state.departmentSort==='duration'?'active':''}">周期</button><button data-department-sort="overdue" class="${state.departmentSort==='overdue'?'active':''}">超时</button><button data-department-sort="tasks" class="${state.departmentSort==='tasks'?'active':''}">任务量</button></div></div></div><div class="department-summary-strip"><div class="department-summary-metric"><span>参与部门</span><strong>${departments.length}</strong></div><div class="department-summary-metric"><span>范围内任务</span><strong>${totalTasks}</strong></div><div class="department-summary-metric"><span>参与成员</span><strong>${allMembers.size}</strong></div><div class="department-summary-metric"><span>超时任务</span><strong class="${totalOverdue?'up':''}">${totalOverdue}</strong></div></div><div class="department-table-head"><span>#</span><span>部门</span><span>任务周期中位数</span><span>参与 Case</span><span>任务</span><span>超时任务</span><span>成员</span><span></span></div>${departmentRows}</div>`;
+    }
+    function filteredCases(stats) {
+      return stats.rows.filter(item => {
+        if(state.trendScope === 'case' && state.bucket && bucketKey(new Date(`${item.closedAt}T00:00:00`),state.period)!==state.bucket) return false;
+        if(state.department && !item.stages.some(task=>task.department===state.department)) return false;
+        if(state.members.length && !item.stages.some(task=>state.members.includes(task.owner))) return false;
+        return true;
+      }).sort((a,b)=>b.durationDays-a.durationDays);
+    }
+    function taskRowsFor(item) {
+      if(state.taskScope==='all' || (!state.department && !state.member)) return item.stages;
+      if(state.members.length) return item.stages.filter(task=>state.members.includes(task.owner));
+      return item.stages.filter(task=>task.department===state.department);
+    }
+    function taskTable(item) {
+      const tasks=taskRowsFor(item); const filteredLabel=state.member?`仅 ${state.member}`:state.department?`仅 ${state.department}`:'相关任务';
+      return `<div class="task-drill"><div class="task-toolbar"><strong>${item.code} · 任务耗时明细</strong><span style="color:var(--muted);font-size:9.5px">任务可并行，耗时不与 Case 总周期直接相加</span>${state.department||state.member?`<span class="task-scope"><button class="${state.taskScope==='filtered'?'active':''}" data-scope="filtered">${filteredLabel}</button><button class="${state.taskScope==='all'?'active':''}" data-scope="all">全部任务</button></span>`:''}</div><div class="task-head"><span>任务 / 阶段</span><span>部门</span><span>负责人</span><span>开始</span><span>完成</span><span>实际耗时</span><span>状态</span></div>${tasks.map(task=>`<div class="task-row"><span class="task-name"><strong>${task.name}</strong><small>${task.id}</small></span><span>${task.department}</span><span>${task.owner}</span><span>${task.startedAt}</span><span>${task.completedAt}</span><span>${(task.hours/24).toFixed(1)}天</span><span class="${task.overdue?'overtime':'ontime'}">${task.overdue?'超时':'按期'}</span></div>`).join('')||'<div style="padding:18px;text-align:center;color:var(--muted);font-size:10px">当前筛选下无任务</div>'}</div>`;
+    }
+    function caseExplorer(product,stats) {
+      const rows=filteredCases(stats); const productMedian=stats.median;
+      const resultTitle = state.member ? `${state.department} / ${state.member} 相关已结案 Case` : state.department ? `${state.department} 相关已结案 Case` : '范围内已结案 Case';
+      const resultSubtitle = state.department ? '部门与成员选择已直接作用于下方结果；展开 Case 查看对应任务' : '点击上方部门筛选结果；每个 Case 只出现一次';
+      return `<div class="case-explorer"><div class="panel-head"><h3>${resultTitle}</h3><span>${resultSubtitle}</span></div><div class="filter-path"><strong>${product.code}</strong>${state.trendScope === 'case' && state.bucket?`<span class="path-chip">趋势分桶 ${state.bucket}<button data-clear="bucket">×</button></span>`:''}${state.department?`<span class="path-chip">部门 ${state.department}<button data-clear="department">×</button></span>`:''}${state.member?`<span class="path-chip">成员 ${state.member}<button data-clear="member">×</button></span>`:''}<span class="filter-result">${rows.length} / ${stats.rows.length} Case</span></div><div class="case-table-head"><span>#</span><span>Case ID</span><span>Case 名称</span><span>结案日期</span><span>结案周期</span><span>相对范围内中位数</span><span>任务</span><span>参与部门</span><span></span></div>${rows.map((item,index)=>{const departments=[...new Set(item.stages.map(task=>task.department))];const delta=item.durationDays-productMedian;const expanded=state.expandedCase===item.id;return `<div class="unified-case"><button class="unified-case-row" data-case="${item.id}"><span class="case-rank">${index+1}</span><span style="font-family:monospace;color:var(--muted)">${item.code}</span><span class="case-title-cell"><strong>${item.name}</strong><small>${item.owner} · ${item.level} · ${item.failMode}</small></span><span>${item.closedAt}</span><strong>${fmtDays(item.durationDays)}</strong><span class="${delta>0?'delta-slow':'delta-fast'}">${delta>0?'+':''}${delta.toFixed(1)}天</span><span>${item.stages.length}</span><span class="dept-tags">${departments.map(dept=>`<i class="dept-tag">${dept}</i>`).join('')}</span><span>${expanded?'⌃':'⌄'}</span></button>${expanded?taskTable(item):''}</div>`;}).join('')||'<div class="empty"><div><strong>当前筛选暂无 Case</strong>请清除部门、成员或趋势分桶筛选</div></div>'}</div>`;
+    }
+
+    function renderCompare(selectedProducts) {
+      const bucketSets = selectedProducts.map(product => ({ product, buckets: bucketsFor(product.code) }));
+      const buckets = bucketSets[0].buckets;
+      const series = bucketSets.map((set,index) => ({ name:set.product.code, values:set.buckets.map(item=>item.avg), color:palette[index] }));
+      const stats = selectedProducts.map(product=>productStats(product));
+      return `<div class="compare-chart"><div class="panel-head"><h3>范围内产品平均结案周期对比</h3><span>同一统计范围、同一趋势粒度 · 最多 3 个产品</span><div class="legend">${selectedProducts.map((product,index)=>`<span><i style="background:${palette[index]}"></i>${product.code}</span>`).join('')}</div></div>${lineChart(series,buckets)}</div><div class="compare-table"><div class="table-row header"><span>产品</span><span>范围内结案 Case</span><span>平均周期</span><span>周期中位数</span><span>按期结案率</span></div>${stats.map((item,index)=>`<div class="table-row"><span class="code"><strong style="color:${palette[index]}">${item.product.code}</strong><small>${item.product.owner}</small></span><span>${item.count}</span><span>${fmtDays(item.avg)}</span><span>${fmtDays(item.median)}</span><span>${item.onTimeRate.toFixed(0)}%</span></div>`).join('')}</div>`;
+    }
+
+    function renderMain() {
+      const title = document.getElementById('contentTitle'); const subtitle=document.getElementById('contentSubtitle'); const content=document.getElementById('content'); const range=activeRange();
+      document.getElementById('rangePill').innerHTML = `<span><b>统计范围：</b>${range.start} 至 ${range.end} · ${state.trendScope === 'task' && state.selected.length === 1 ? '按任务实际完成时间' : '按 Case 实际结案时间'}计入</span><span><b>趋势粒度：</b>按${state.period==='day'?'日':state.period==='week'?'周':'月'}汇总</span>`;
+      if (!state.selected.length) { title.textContent='产品效率总览'; subtitle.textContent='比较产品结案效率，选择产品后查看趋势与瓶颈'; content.innerHTML=overview(); content.querySelectorAll('[data-open-product]').forEach(button=>button.addEventListener('click',()=>selectSingle(button.dataset.openProduct))); }
+      else if (state.selected.length===1) { const product=products.find(item=>item.code===state.selected[0]); title.textContent=product.code; subtitle.textContent=`${product.name} · ${product.platform} · ${product.family} · 产品负责人 ${product.owner}`; content.innerHTML=renderSingle(product); bindDetail(product); }
+      else { const selectedProducts=state.selected.map(code=>products.find(item=>item.code===code)); title.textContent=`${selectedProducts.length} 个产品对比`; subtitle.textContent=selectedProducts.map(item=>item.code).join(' / '); content.innerHTML=renderCompare(selectedProducts); }
+      bindTooltips();
+    }
+    function enhanceMemberDropdown() {
+      const bar=document.querySelector('.member-filter-bar');
+      if(!bar) return;
+      const source=[...bar.querySelectorAll('.member-pill[data-member]')].filter(button=>button.dataset.member);
+      const options=source.map(button=>{
+        const match=button.textContent.replace(/\s+/g,' ').match(/(\d+)任务\s*·\s*([\d.]+)天(?:\s*·\s*(\d+)超时)?/);
+        return {name:button.dataset.member,tasks:Number(match?.[1]||0),days:Number(match?.[2]||0),overdue:Number(match?.[3]||0)};
+      });
+      const selected=options.filter(option=>state.members.includes(option.name));
+      const scope=selected.length?selected:options;
+      const summary={tasks:scope.reduce((sum,item)=>sum+item.tasks,0),days:median(scope.map(item=>item.days)),overdue:scope.reduce((sum,item)=>sum+item.overdue,0)};
+      const title=selected.length?`已选 ${selected.length} 人`:'全部成员';
+      bar.innerHTML=`<span class="member-filter-label">成员筛选</span><div class="member-multiselect"><button class="member-select-trigger ${state.memberOpen?'open':''}" data-member-toggle><span class="member-select-title">${title}</span><span class="member-select-summary">${summary.tasks}个任务 · ${summary.days.toFixed(1)}天 · ${summary.overdue}个超时</span><span class="member-select-arrow">⌄</span></button><div class="member-select-menu ${state.memberOpen?'open':''}"><button class="member-option-row member-clear-row ${!state.members.length?'selected':''}" data-member-all><span class="member-check">✓</span><span class="member-option-name">全部成员</span><span class="member-option-metrics">${options.reduce((sum,item)=>sum+item.tasks,0)}个任务 · ${median(options.map(item=>item.days)).toFixed(1)}天 · ${options.reduce((sum,item)=>sum+item.overdue,0)}个超时</span></button>${options.map(option=>`<button class="member-option-row ${state.members.includes(option.name)?'selected':''}" data-member-option="${option.name}"><span class="member-check">✓</span><span class="member-option-name">${option.name}</span><span class="member-option-metrics">${option.tasks}个任务 · ${option.days.toFixed(1)}天 · <span class="${option.overdue?'risk':''}">${option.overdue}个超时</span></span></button>`).join('')}</div></div>`;
+    }
+    function bindDetail(product) {
+      enhanceMemberDropdown();
+      document.querySelectorAll('[data-trend-scope]').forEach(button=>button.addEventListener('click',()=>{state.trendScope=button.dataset.trendScope;state.bucket='';state.expandedCase='';renderMain();}));
+      document.querySelectorAll('[data-clear-trend-bucket]').forEach(button=>button.addEventListener('click',()=>{state.bucket='';renderMain();}));
+      document.querySelectorAll('[data-case]').forEach(button=>button.addEventListener('click',()=>{state.expandedCase=state.expandedCase===button.dataset.case?'':button.dataset.case;renderMain();}));
+      document.querySelectorAll('[data-department-sort]').forEach(button=>button.addEventListener('click',()=>{state.departmentSort=button.dataset.departmentSort;renderMain();}));
+      document.querySelectorAll('[data-department]').forEach(button=>button.addEventListener('click',()=>{state.department=state.department===button.dataset.department?'':button.dataset.department;state.member='';state.expandedCase='';state.taskScope='filtered';renderMain();}));
+      document.querySelectorAll('[data-department-back]').forEach(button=>button.addEventListener('click',()=>{state.department='';state.member='';state.expandedCase='';state.taskScope='filtered';renderMain();}));
+      document.querySelectorAll('[data-member-toggle]').forEach(button=>button.addEventListener('click',()=>{state.memberOpen=!state.memberOpen;button.classList.toggle('open',state.memberOpen);button.nextElementSibling?.classList.toggle('open',state.memberOpen);}));
+      document.querySelectorAll('[data-member-all]').forEach(button=>button.addEventListener('click',()=>{state.members=[];state.memberOpen=false;state.expandedCase='';state.taskScope='filtered';renderMain();}));
+      document.querySelectorAll('[data-member-option]').forEach(button=>button.addEventListener('click',()=>{const name=button.dataset.memberOption;state.members=state.members.includes(name)?state.members.filter(item=>item!==name):[...state.members,name];state.memberOpen=true;state.expandedCase='';state.taskScope='filtered';renderMain();}));
+      document.querySelectorAll('[data-scroll-cases]').forEach(button=>button.addEventListener('click',()=>document.querySelector('.case-explorer')?.scrollIntoView({behavior:'smooth',block:'start'})));
+      document.querySelectorAll('[data-scope]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();state.taskScope=button.dataset.scope;renderMain();}));
+      document.querySelectorAll('[data-clear]').forEach(button=>button.addEventListener('click',()=>{const key=button.dataset.clear;if(key==='department'){state.department='';state.member='';}else state[key]='';state.expandedCase='';state.taskScope='filtered';renderMain();}));
+      document.querySelectorAll('.full-trend .chart-point:not([pointer-events])').forEach(point=>point.addEventListener('click',()=>{state.bucket=state.bucket===point.dataset.bucket?'':point.dataset.bucket;state.expandedCase='';renderMain();}));
+    }
+    function bindTooltips() { document.querySelectorAll('[data-tip]').forEach(point=>{ point.addEventListener('mouseenter',event=>{const [name,label,value,count,detail]=point.dataset.tip.split('|');const tip=document.getElementById('tooltip');tip.innerHTML=`<strong>${name} · ${label}</strong>${value}<br><span style="color:#8491a5">${count}</span>${detail?`<br><span style="color:#C87500">${detail}</span>`:''}`;tip.style.display='block';moveTooltip(event);}); point.addEventListener('mousemove',moveTooltip); point.addEventListener('mouseleave',()=>document.getElementById('tooltip').style.display='none'); }); }
+    function moveTooltip(event) { const tip=document.getElementById('tooltip');tip.style.left=`${event.clientX+14}px`;tip.style.top=`${event.clientY+14}px`; }
+    function showToast(text) { const toast=document.getElementById('toast');toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toast.classList.remove('show'),1800); }
+    function render() {
+      renderSidebar();
+      renderMain();
+      document.querySelectorAll('#rangeTabs button').forEach(button=>button.classList.toggle('active',!state.custom && button.dataset.range===state.rangePreset));
+      document.querySelectorAll('#periodTabs button').forEach(button=>button.classList.toggle('active',button.dataset.period===state.period));
+      document.getElementById('customToggle').classList.toggle('active',!!state.custom);
+    }
+
+    document.getElementById('rangeTabs').addEventListener('click',event=>{const button=event.target.closest('[data-range]');if(!button)return;state.rangePreset=button.dataset.range;state.custom=null;state.period=recommendedPeriod(state.rangePreset);state.expandedCase='';state.bucket='';render();});
+    document.getElementById('periodTabs').addEventListener('click',event=>{const button=event.target.closest('[data-period]');if(!button)return;state.period=button.dataset.period;state.expandedCase='';state.bucket='';render();});
+    document.getElementById('productSearch').addEventListener('input',event=>{state.search=event.target.value;renderSidebar();});
+    document.getElementById('clearSelection').addEventListener('click',()=>{state.selected=[];state.department='';state.member='';state.bucket='';state.expandedCase='';state.taskScope='filtered';render();});
+    document.getElementById('customToggle').addEventListener('click',()=>document.getElementById('customPopover').classList.toggle('open'));
+    document.getElementById('clearCustom').addEventListener('click',()=>{state.custom=null;state.rangePreset='90';state.period='week';state.bucket='';state.expandedCase='';document.getElementById('customStart').value='';document.getElementById('customEnd').value='';document.getElementById('customPopover').classList.remove('open');render();});
+    document.getElementById('applyCustom').addEventListener('click',()=>{const start=document.getElementById('customStart').value;const end=document.getElementById('customEnd').value;if(!start||!end||start>end)return showToast('请选择有效的开始和结束日期');state.custom={start,end};state.period=recommendedCustomPeriod(start,end);state.bucket='';state.expandedCase='';document.getElementById('customPopover').classList.remove('open');render();});
+    document.addEventListener('click',event=>{const tools=event.target.closest('.time-tools');if(!tools)document.getElementById('customPopover').classList.remove('open');});
+    document.getElementById('sidebarCollapse').addEventListener('click',()=>document.getElementById('appSidebar').classList.add('collapsed'));
+    document.querySelector('.app-logo').addEventListener('click',()=>{if(document.getElementById('appSidebar').classList.contains('collapsed'))document.getElementById('appSidebar').classList.remove('collapsed');});
+    document.querySelectorAll('.nav-item:not(.active),[data-shell-action]').forEach(button=>button.addEventListener('click',()=>showToast(`${button.dataset.shellAction||button.textContent.trim()} · 独立原型中不跳转`)));
+
+    render();
+  </script>
+</body>
+</html>
